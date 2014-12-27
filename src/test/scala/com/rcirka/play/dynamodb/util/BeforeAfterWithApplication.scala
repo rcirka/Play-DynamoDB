@@ -19,15 +19,15 @@ abstract class BeforeAfterWithApplication extends WithApplication(new FakeApplic
 //      Await.result(future2, 30 seconds)
 //    }
 
-//    val doa = new BaseDynamoDao[TestModel]("", Test.dbClient) {}
-//
-//    val future = doa.listTables()
-//    val tableNames = Await.result(future, 10 seconds)
-//
-//    tableNames.foreach{tableName =>
-//      val future = doa.deleteTable(tableName)
-//      Await.result(future, 10 seconds)
-//    }
+    val doa = new BaseDynamoDao[TestModel]("", Test.dbClient) {}
+
+    val future = doa.listTables()
+    val tableNames = Await.result(future, 10 seconds)
+
+    tableNames.foreach{tableName =>
+      val future = doa.deleteTable(tableName)
+      Await.result(future, 10 seconds)
+    }
 
 
   }

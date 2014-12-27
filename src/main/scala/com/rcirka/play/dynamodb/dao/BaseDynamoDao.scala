@@ -57,12 +57,20 @@ abstract class BaseDynamoDao[Model: Format](tableName: String, client: DynamoDBC
     webService.post("DynamoDB_20120810.DeleteTable", tableNameJson).map(x => ())
   }
 
-  def insert(model: Model) = {
+  def findOne(key: JsObject) : Future[Option[Model]] = {
+    val json = Json.obj(
+      "Key" -> key
+    ) ++ tableNameJson
+
+    webService.getItem(json).map { _.map(_.as[Model]) }
+  }
+
+  def put(model: Model) = {
     val json = Json.obj(
       "Item" -> model
     ) ++ tableNameJson
 
-    webService.putItem2(json)
+    webService.putItem(json).map(x => ())
   }
 
 //  def findAll() : Future[Seq[Model]] = {

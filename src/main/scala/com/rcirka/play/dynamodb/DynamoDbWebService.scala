@@ -2,11 +2,11 @@ package com.rcirka.play.dynamodb
 
 import java.net.URI
 
-import com.amazonaws.auth.{AWS4Signer, AWSCredentialsProvider}
+import com.amazonaws.auth.AWS4Signer
 import com.amazonaws.util.AwsHostNameUtils
-import com.amazonaws.util.StringUtils._
-import com.amazonaws.{AmazonWebServiceClient, AmazonWebServiceRequest, DefaultRequest}
+import com.amazonaws.{AmazonWebServiceRequest, DefaultRequest}
 import com.rcirka.play.dynamodb.utils.DynamoDbException
+import com.rcirka.play.dynamodb.utils.JsonHelper._
 import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.ws.{WS, WSResponse}
@@ -14,7 +14,6 @@ import play.api.libs.ws.{WS, WSResponse}
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.reflect.runtime.{universe => ru}
 import play.api.http.Status._
 
 class DynamoDbWebService(
@@ -63,8 +62,24 @@ class DynamoDbWebService(
 
   }
 
-  def putItem2(json: JsValue) : Future[JsValue] = {
-    post("DynamoDB_20120810.PutItem", json).map(_.json)
+  def getItem(json: JsObject) : Future[Option[JsValue]] = {
+    val wrappedItem = wrapItem((json \ "Key").as[JsObject])
+    val jsonTransformer = (__ \ 'Key).json.prune
+    val newJson = json.transform(jsonTransformer).get ++ Json.obj("Key" -> wrappedItem).removeNulls
+
+    post("DynamoDB_20120810.GetItem", newJson).map { response =>
+      for {
+        json <- response.json.asOpt[JsObject]
+        item <- (json \ "Item").asOpt[JsObject]
+      } yield unwrapItem(item)
+    }
+  }
+
+  def putItem(json: JsObject) : Future[JsValue] = {
+    val wrappedItem = wrapItem((json \ "Item").as[JsObject])
+    val jsonTransformer = (__ \ 'Item).json.prune
+    val newJson = json.transform(jsonTransformer).get ++ Json.obj("Item" -> wrappedItem).removeNulls
+    post("DynamoDB_20120810.PutItem", newJson).map(_.json)
   }
 
   def scan(json: JsValue) : Future[Seq[JsObject]] = {
@@ -76,9 +91,25 @@ class DynamoDbWebService(
     }
   }
 
+  def wrapItem(jsObject: JsObject) : JsObject = {
+    jsObject.keys.foldLeft(Json.obj())((acc, key) => acc + (key, wrapItemObj((jsObject \ key))))
+  }
+
+  def wrapItemObj(jsValue: JsValue) : JsValue = {
+    jsValue match {
+      case x: JsNumber => Json.obj("N" -> x.toString)
+      case x: JsBoolean => Json.obj("BOOL" -> x)
+      case x: JsString => Json.obj("S" -> x)
+      case x: JsArray => Json.obj("L" -> x.as[Seq[JsValue]].map(wrapItemObj))
+      case x: JsObject => Json.obj("M" -> wrapItem(x))
+      case _ => JsNull
+    }
+  }
+
   def unwrapItem(js: JsObject) : JsObject = {
     js.keys.foldLeft(Json.obj())((acc, key) => acc + (key, unwrapItemObj((js \ key).as[JsObject])))
   }
+
 
   // TODO: Add more cases and validation
   def unwrapItemObj(obj: JsObject) : JsValue = {
