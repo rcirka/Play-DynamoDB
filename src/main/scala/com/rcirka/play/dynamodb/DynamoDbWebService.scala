@@ -75,6 +75,14 @@ class DynamoDbWebService(
     }
   }
 
+  def deleteItem(json: JsObject) : Future[JsValue] = {
+    val wrappedItem = wrapItem((json \ "Key").as[JsObject])
+    val jsonTransformer = (__ \ 'Key).json.prune
+    val newJson = json.transform(jsonTransformer).get ++ Json.obj("Key" -> wrappedItem).removeNulls
+
+    post("DynamoDB_20120810.DeleteItem", newJson).map { _.json }
+  }
+
   def putItem(json: JsObject) : Future[JsValue] = {
     val wrappedItem = wrapItem((json \ "Item").as[JsObject])
     val jsonTransformer = (__ \ 'Item).json.prune

@@ -33,7 +33,7 @@ class BaseDynamoDaoSpec extends Specification {
       createTable()
 
       val model = TestModel("1")
-      awaitResult(doa.put(model))
+      awaitResult(doa.putOne(model))
 
       val result = awaitResult(doa.findOne(Json.obj("id" -> "1")))
 
@@ -42,8 +42,13 @@ class BaseDynamoDaoSpec extends Specification {
     } tag "insertitem"
 
     "Delete Item" in new DynamoDAOSpecContext {
+      createTable()
 
-    }
+      val model = TestModel("1")
+      awaitResult(doa.putOne(model))
+
+      awaitResult(doa.deleteOne(Json.obj("id" -> "1")))
+    } tag "deleteitem"
 
     "return None for GetItem if no result found" in new DynamoDAOSpecContext {
       createTable()
@@ -51,10 +56,12 @@ class BaseDynamoDaoSpec extends Specification {
     } tag "empty result"
 
     "Get all Items" in new DynamoDAOSpecContext {
-//      val future = doa.findAll()
-//      val response = Await.result(future, 10 seconds)
-//      println(response)
-    }
+      createTable()
+
+      (1 to 10).foreach{i => awaitResult(doa.putOne(TestModel()))}
+
+      awaitResult(doa.findAll()) === 10
+    } tag "findall"
   }
 }
 

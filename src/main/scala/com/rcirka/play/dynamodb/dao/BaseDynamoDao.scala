@@ -57,6 +57,12 @@ abstract class BaseDynamoDao[Model: Format](tableName: String, client: DynamoDBC
     webService.post("DynamoDB_20120810.DeleteTable", tableNameJson).map(x => ())
   }
 
+  def findAll() : Future[Seq[Model]] = {
+    webService.scan(tableNameJson).map { result =>
+      result.map(_.as[Model])
+    }
+  }
+
   def findOne(key: JsObject) : Future[Option[Model]] = {
     val json = Json.obj(
       "Key" -> key
@@ -65,7 +71,7 @@ abstract class BaseDynamoDao[Model: Format](tableName: String, client: DynamoDBC
     webService.getItem(json).map { _.map(_.as[Model]) }
   }
 
-  def put(model: Model) = {
+  def putOne(model: Model) = {
     val json = Json.obj(
       "Item" -> model
     ) ++ tableNameJson
@@ -73,11 +79,13 @@ abstract class BaseDynamoDao[Model: Format](tableName: String, client: DynamoDBC
     webService.putItem(json).map(x => ())
   }
 
-//  def findAll() : Future[Seq[Model]] = {
-//    val scanRequest = new ScanRequest().withTableName(tableName)
-//    webService.scan(scanRequest).map { result =>
-//      result.map(_.as[Model])
-//    }
-//  }
+
+  def deleteOne(key: JsObject) : Future[Unit] = {
+    val json = Json.obj(
+      "Key" -> key
+    ) ++ tableNameJson
+
+    webService.getItem(json).map { x => () }
+  }
 
 }
