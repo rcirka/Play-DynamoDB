@@ -60,7 +60,7 @@ class BaseDynamoDaoSpec extends Specification {
 
       (1 to 10).foreach{i => awaitResult(doa.putOne(TestModel()))}
 
-      awaitResult(doa.findAll()) === 10
+      awaitResult(doa.findAll()).length === 10
     } tag "findall"
   }
 }
