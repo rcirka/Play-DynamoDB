@@ -5,7 +5,7 @@ import java.net.URI
 import com.amazonaws.auth.AWS4Signer
 import com.amazonaws.util.AwsHostNameUtils
 import com.amazonaws.{AmazonWebServiceRequest, DefaultRequest}
-import com.rcirka.play.dynamodb.utils.DynamoDbException
+import com.rcirka.play.dynamodb.exception._
 import com.rcirka.play.dynamodb.utils.JsonHelper._
 import play.api.Play.current
 import play.api.libs.json._
@@ -15,6 +15,8 @@ import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.http.Status._
+
+import scala.util.Try
 
 class DynamoDbWebService(
   val client: DynamoDBClient
@@ -40,26 +42,38 @@ class DynamoDbWebService(
 
     //println(headers)
 
+    println(s"--- $target ---")
     println(Json.prettyPrint(postData))
 
     WS.url(client.endpoint.toString).withHeaders(headers.toSeq: _*).post(postData).map { response =>
       println(response.json)
 
-      if (response.status == OK) {
-        response
-      }
-      else {
-        val errorMessage = (for {
-          errorResponse <- response.json.asOpt[JsObject]
-          errorType <- (errorResponse \ "__type").asOpt[String]
-          errorMessage <- (errorResponse \ "Message").asOpt[String]
-          message <- Some(s"$errorType. $errorMessage")
-        } yield message).getOrElse("Unknown error")
+      response.status match {
+        case OK => response
+        case _ => {
+          val exception = Try {
+            // Try to get the exception type from the json response
+            val errorResponse = response.json.as[JsObject]
+            val errorClass = (errorResponse \ "__type").as[String].split('#')(1)
+            val errorMessage = (errorResponse \ "Message").as[String]
 
-        throw DynamoDbException(errorMessage)
+            // Dynamically get the exception for the error class
+            val constructor = Class.forName(s"com.rcirka.play.dynamodb.exception.$errorClass").getConstructors()(0)
+            constructor.newInstance(errorMessage).asInstanceOf[Exception]
+          }.getOrElse {
+            // Otherwise throw a generic exception
+            val errorMessage = (for {
+              errorResponse <- response.json.asOpt[JsObject]
+              errorMessage <- (errorResponse \ "Message").asOpt[String]
+            } yield errorMessage).getOrElse("AWS returned unknown error")
+
+            new UnknownException(errorMessage)
+          }
+
+          throw exception
+        }
       }
     }
-
   }
 
   def getItem(json: JsObject) : Future[Option[JsValue]] = {

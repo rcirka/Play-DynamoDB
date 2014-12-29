@@ -1,6 +1,6 @@
 package com.rcirka.play.dynamodb.util
 
-import com.rcirka.play.dynamodb.dao.BaseDynamoDao
+import com.rcirka.play.dynamodb.dao.{GlobalDynamoDao, BaseDynamoDao}
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -9,27 +9,10 @@ import play.api.test.{WithApplication, FakeApplication}
 
 abstract class BeforeAfterWithApplication extends WithApplication(new FakeApplication()) {
   private def cleanDB() {
-//    Seq(UserDAO, EventDAO, MessageDAO).foreach { dao =>
-//      // Drop collections and ignore missing collection errors
-//      val future = dao.drop().recover { case _ => false }
-//      Await.result(future, 30 seconds)
-//
-//      // Recreate indexes
-//      val future2 = dao.ensureIndexes()
-//      Await.result(future2, 30 seconds)
-//    }
+    val dao = new GlobalDynamoDao(Test.dbClient)
 
-    val doa = new BaseDynamoDao[TestModel]("", Test.dbClient) {}
-
-    val future = doa.listTables()
-    val tableNames = Await.result(future, 10 seconds)
-
-    tableNames.foreach{tableName =>
-      val future = doa.deleteTable(tableName)
-      Await.result(future, 10 seconds)
-    }
-
-
+    // Delete all tables
+    awaitResult(dao.listTables()).foreach(tableName => awaitResult(dao.deleteTable(tableName)))
   }
   def before()
   def after() {}

@@ -1,51 +1,30 @@
 package com.rcirka.play.dynamodb.dao
 
+import com.rcirka.play.dynamodb.result.DescribeTableResult
 import com.rcirka.play.dynamodb.{DynamoDBClient, DynamoDbWebService}
 import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.util.{Failure, Success}
 
-abstract class BaseDynamoDao[Model: Format](tableName: String, client: DynamoDBClient) {
+abstract class BaseDynamoDao[Model: Format](val tableName: String, val client: DynamoDBClient) {
 
   val webService = DynamoDbWebService(client)
   val tableNameJson = Json.obj("TableName" -> tableName)
 
-  def listTables() : Future[Seq[String]] = {
-    webService.post("DynamoDB_20120810.ListTables", Json.obj()).map{ result =>
-      (result.json \ "TableNames").as[Seq[String]]
-    }
-  }
 
-  def deleteTable(tableName: String) : Future[Unit] = {
-    webService.post("DynamoDB_20120810.DeleteTable", Json.obj("TableName" -> tableName)).map(x => ())
-  }
 
-  def createTable() : Future[Unit] = {
-    val json = Json.obj(
-      "KeySchema" -> Json.arr(
-        Json.obj(
-          "AttributeName" -> "id",
-          "KeyType" -> "HASH"
-        )
-      ),
-      "AttributeDefinitions" -> Json.arr(
-        Json.obj(
-          "AttributeName" -> "id",
-          "AttributeType" -> "S"
-        )
-      ),
-      "ProvisionedThroughput" -> Json.obj(
-        "ReadCapacityUnits" -> 5,
-        "WriteCapacityUnits" -> 5
-      )
-    ) ++ tableNameJson
+  val result = Await.result(tableExists(), 30 seconds)
+  println("test")
 
-    //println(Json.prettyPrint(json))
+//  f.onComplete {
+//    case Success(value) => println("--- SUCCESS ---")
+//    case Failure(e) => println("--- Failure ---")
+//  }
 
-    webService.post("DynamoDB_20120810.CreateTable", json).map(x => ())
-  }
 
-  def doesTableExist() : Future[Boolean] = {
+  def tableExists() : Future[Boolean] = {
     webService.post("DynamoDB_20120810.ListTables", tableNameJson).map { result =>
       val json = result.json.as[JsObject]
 
