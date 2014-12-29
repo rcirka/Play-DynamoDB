@@ -13,16 +13,10 @@ abstract class BaseDynamoDao[Model: Format](val tableName: String, val client: D
   val webService = DynamoDbWebService(client)
   val tableNameJson = Json.obj("TableName" -> tableName)
 
+  //new GlobalDynamoDao(client).createTableIfMissing(tableName)
 
-
-  val result = Await.result(tableExists(), 30 seconds)
-  println("test")
-
-//  f.onComplete {
-//    case Success(value) => println("--- SUCCESS ---")
-//    case Failure(e) => println("--- Failure ---")
-//  }
-
+  // Block thread for table creation
+  val result = Await.result(new GlobalDynamoDao(client).createTableOnComplete(tableName), 30 seconds)
 
   def tableExists() : Future[Boolean] = {
     webService.post("DynamoDB_20120810.ListTables", tableNameJson).map { result =>

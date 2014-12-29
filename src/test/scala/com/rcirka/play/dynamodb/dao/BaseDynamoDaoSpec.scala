@@ -5,13 +5,12 @@ import com.rcirka.play.dynamodb.util.{BeforeAfterWithApplication, Test, TestMode
 import com.rcirka.play.dynamodb.util._
 import org.specs2.mutable._
 import play.api.libs.json._
+import scala.concurrent.duration._
+
+import scala.concurrent.Await
 
 class BaseDynamoDaoSpec extends Specification {
   "BaseDynamoDaoSpec" should {
-
-
-
-
     "Insert and get item" in new DynamoDAOSpecContext {
       val model = TestModel("1")
       awaitResult(dao.putOne(model))
@@ -41,13 +40,23 @@ class BaseDynamoDaoSpec extends Specification {
   }
 }
 
+class TestDao extends BaseDynamoDao[TestModel]("Tests", Test.dbClient) {
+
+}
+
+
 sealed trait DynamoDAOSpecContext extends BeforeAfterWithApplication {
 
   val tableName = "Tests"
 
-  lazy val dao = new BaseDynamoDao[TestModel](tableName, Test.dbClient) {}
+  lazy val dao = new TestDao()
 
   def before() {}
 
   //def createTable() = awaitResult(dao.createTable())
+
+  def testDao() = {
+
+  }
 }
+
