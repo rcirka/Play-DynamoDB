@@ -113,38 +113,6 @@ class DynamoDbWebService(
     }
   }
 
-  def wrapItem(jsObject: JsObject) : JsObject = {
-    jsObject.keys.foldLeft(Json.obj())((acc, key) => acc + (key, wrapItemObj((jsObject \ key))))
-  }
-
-  def wrapItemObj(jsValue: JsValue) : JsValue = {
-    jsValue match {
-      case x: JsNumber => Json.obj("N" -> x.toString)
-      case x: JsBoolean => Json.obj("BOOL" -> x)
-      case x: JsString => Json.obj("S" -> x)
-      case x: JsArray => Json.obj("L" -> x.as[Seq[JsValue]].map(wrapItemObj))
-      case x: JsObject => Json.obj("M" -> wrapItem(x))
-      case _ => JsNull
-    }
-  }
-
-  def unwrapItem(js: JsObject) : JsObject = {
-    js.keys.foldLeft(Json.obj())((acc, key) => acc + (key, unwrapItemObj((js \ key).as[JsObject])))
-  }
-
-
-  // TODO: Add more cases and validation
-  def unwrapItemObj(obj: JsObject) : JsValue = {
-    val jsObjKey = obj.keys.head
-    jsObjKey match {
-      case "S" | "BOOL"  => obj \ jsObjKey
-      case "N" => JsNumber((obj \ jsObjKey).as[String].toLong)
-      case "M" => unwrapItem((obj \ jsObjKey).as[JsObject])
-      case "L" => JsArray((obj \ jsObjKey).as[Seq[JsObject]].map(unwrapItemObj))
-      case _ => JsNull
-    }
-  }
-
 }
 
 object DynamoDbWebService {

@@ -1,6 +1,6 @@
-package com.rcirka.play.dynamodb.utils
+package com.rcirka.play.dynamodb.models
 
-import com.rcirka.play.dynamodb.utils.AttributeType.AttributeType
+import com.rcirka.play.dynamodb.models.enums.AttributeType.AttributeType
 import play.api.libs.json.Json
 
 case class AttributeDefinition (

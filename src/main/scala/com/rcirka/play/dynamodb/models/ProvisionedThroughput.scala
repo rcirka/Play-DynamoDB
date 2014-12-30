@@ -1,4 +1,4 @@
-package com.rcirka.play.dynamodb.requests
+package com.rcirka.play.dynamodb.models
 
 import play.api.libs.json.Json
 

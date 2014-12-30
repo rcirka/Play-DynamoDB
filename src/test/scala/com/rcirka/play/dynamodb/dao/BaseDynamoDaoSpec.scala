@@ -1,16 +1,14 @@
 package com.rcirka.play.dynamodb.dao
 
 import com.rcirka.play.dynamodb.exception._
-import com.rcirka.play.dynamodb.models.enums.KeyType
-import com.rcirka.play.dynamodb.models.indexes.AttributeIndex
+import com.rcirka.play.dynamodb.models.{Projection, ProvisionedThroughput, AttributeDefinition}
+import com.rcirka.play.dynamodb.models.enums.{ProjectionType, AttributeType, KeyType}
+import com.rcirka.play.dynamodb.models.indexes.{TableIndex, TableIndex$, AttributeIndex}
 import com.rcirka.play.dynamodb.util.{BeforeAfterWithApplication, Test, TestModel}
 import com.rcirka.play.dynamodb.util._
-import com.rcirka.play.dynamodb.utils.{AttributeType, AttributeDefinition}
 import org.specs2.mutable._
 import play.api.libs.json._
-import scala.concurrent.duration._
-
-import scala.concurrent.Await
+import com.rcirka.play.dynamodb.Dsl._
 
 class BaseDynamoDaoSpec extends Specification {
   "BaseDynamoDaoSpec" should {
@@ -18,9 +16,11 @@ class BaseDynamoDaoSpec extends Specification {
       val model = TestModel("1")
       awaitResult(dao.putOne(model))
 
-      val result = awaitResult(dao.findOne(Json.obj("id" -> "1")))
+      val result = awaitResult(dao.findOne("1"))
 
       Some(model) === result
+
+      val x: JsValue = Json.toJson(3)
 
     } tag "insertitem"
 
@@ -36,19 +36,35 @@ class BaseDynamoDaoSpec extends Specification {
     } tag "empty result"
 
     "Get all Items" in new DynamoDAOSpecContext {
-      (1 to 10).foreach{i => awaitResult(dao.putOne(TestModel()))}
+      (1 to 10).foreach { i => awaitResult(dao.putOne(TestModel()))}
 
-      awaitResult(dao.findAll()).length === 10
+      awaitResult(dao.getAll()).length === 10
     } tag "findall"
+
+    "Query by global index" in new DynamoDAOSpecContext {
+      val model = TestModel("1")
+      awaitResult(dao.putOne(model))
+
+      awaitResult(dao.queryByIndex("myindex", "mystring" $eq "stringval")).length === 1
+    } tag "query"
   }
 }
 
 class TestDao extends BaseDynamoDao[TestModel](
   client = Test.dbClient,
   tableName = "Tests",
-  primaryAttributeIndex = AttributeIndex("id", KeyType.Hash),
-  attributeDefinitions = Seq(AttributeDefinition("id", AttributeType.String))
-
+  keySchema = Seq(AttributeIndex("id", KeyType.Hash)),
+  attributeDefinitions = Seq(AttributeDefinition("id", AttributeType.String), AttributeDefinition("mystring", AttributeType.String)),
+  globalSecondaryIndexes = Seq(
+    TableIndex(
+      "myindex",
+      Seq(
+        AttributeIndex("mystring", KeyType.Hash)
+      ),
+      provisionedThroughput = Some(ProvisionedThroughput()),
+      projection = Some(Projection(ProjectionType.All))
+    )
+  )
 )
 
 

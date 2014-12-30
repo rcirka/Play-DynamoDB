@@ -1,4 +1,4 @@
-package com.rcirka.play.dynamodb.utils
+package com.rcirka.play.dynamodb.models.enums
 
 import play.api.libs.json._
 
