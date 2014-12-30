@@ -1,8 +1,11 @@
 package com.rcirka.play.dynamodb.dao
 
 import com.rcirka.play.dynamodb.exception._
+import com.rcirka.play.dynamodb.models.enums.KeyType
+import com.rcirka.play.dynamodb.models.indexes.AttributeIndex
 import com.rcirka.play.dynamodb.util.{BeforeAfterWithApplication, Test, TestModel}
 import com.rcirka.play.dynamodb.util._
+import com.rcirka.play.dynamodb.utils.{AttributeType, AttributeDefinition}
 import org.specs2.mutable._
 import play.api.libs.json._
 import scala.concurrent.duration._
@@ -40,9 +43,13 @@ class BaseDynamoDaoSpec extends Specification {
   }
 }
 
-class TestDao extends BaseDynamoDao[TestModel]("Tests", Test.dbClient) {
+class TestDao extends BaseDynamoDao[TestModel](
+  client = Test.dbClient,
+  tableName = "Tests",
+  primaryAttributeIndex = AttributeIndex("id", KeyType.Hash),
+  attributeDefinitions = Seq(AttributeDefinition("id", AttributeType.String))
 
-}
+)
 
 
 sealed trait DynamoDAOSpecContext extends BeforeAfterWithApplication {

@@ -1,4 +1,4 @@
-package com.rcirka.play.dynamodb.result
+package com.rcirka.play.dynamodb.results
 
 import play.api.libs.json.Json
 

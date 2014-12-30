@@ -1,12 +1,14 @@
 package com.rcirka.play.dynamodb.dao
 
-import com.rcirka.play.dynamodb.result.DescribeTableResult
+import com.rcirka.play.dynamodb.requests.CreateTableRequest
+import com.rcirka.play.dynamodb.results.DescribeTableResult
 import com.rcirka.play.dynamodb.{DynamoDbWebService, DynamoDBClient}
 import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import retry._
+import CreateTableRequest._
 
 class GlobalDynamoDao(val client: DynamoDBClient) {
 
@@ -64,22 +66,26 @@ class GlobalDynamoDao(val client: DynamoDBClient) {
     }
   }
 
+  def createTable(request: CreateTableRequest) : Future[Unit] = {
+    webService.post("DynamoDB_20120810.CreateTable", Json.toJson(request)).map(x => ())
+  }
+
   /**
    * Future is completed when table status has turned active
    * @param tableName
    * @return
    */
-  def createTableOnComplete(tableName: String) : Future[Unit] = {
+  def createTableOnComplete(request: CreateTableRequest) : Future[Unit] = {
 
-    Await.result(createTable(tableName), 10 seconds)
+    Await.result(createTable(request), 10 seconds)
 
     implicit val success = Success[DescribeTableResult](_.Table.TableStatus.exists(_ == "ACTIVE"))
 
-    val policy = retry.Pause(2, 1 second)
+    val policy = retry.Pause(60, 1 second)
 
     val future = policy { () =>
       println("--- Waiting for create table ---")
-      describeTable(tableName)
+      describeTable(request.tableName)
     }
 
     val result = Await.result(future, 10 seconds)

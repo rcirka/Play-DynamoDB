@@ -1,14 +1,24 @@
 package com.rcirka.play.dynamodb.dao
 
-import com.rcirka.play.dynamodb.result.DescribeTableResult
+import com.rcirka.play.dynamodb.models.indexes.{LocalSecondaryIndex, AttributeIndex}
+import com.rcirka.play.dynamodb.requests.CreateTableRequest
+import com.rcirka.play.dynamodb.results.DescribeTableResult
+import com.rcirka.play.dynamodb.utils.AttributeDefinition
 import com.rcirka.play.dynamodb.{DynamoDBClient, DynamoDbWebService}
 import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import com.rcirka.play.dynamodb.utils.SeqUtils.SeqHelper
 
-abstract class BaseDynamoDao[Model: Format](val tableName: String, val client: DynamoDBClient) {
+abstract class BaseDynamoDao[Model: Format](
+  val client: DynamoDBClient,
+  val tableName: String,
+  val primaryAttributeIndex: AttributeIndex,
+  val localSecondaryIndexes: Seq[LocalSecondaryIndex] = Nil,
+  val attributeDefinitions: Seq[AttributeDefinition]
+) {
 
   val webService = DynamoDbWebService(client)
   val tableNameJson = Json.obj("TableName" -> tableName)
@@ -16,7 +26,14 @@ abstract class BaseDynamoDao[Model: Format](val tableName: String, val client: D
   //new GlobalDynamoDao(client).createTableIfMissing(tableName)
 
   // Block thread for table creation
-  val result = Await.result(new GlobalDynamoDao(client).createTableOnComplete(tableName), 30 seconds)
+  val result = Await.result(new GlobalDynamoDao(client).createTableOnComplete(
+    CreateTableRequest(
+      tableName,
+      keySchema = Seq(primaryAttributeIndex),
+      localSecondaryIndexes = localSecondaryIndexes.toOption,
+      attributeDefinitions = attributeDefinitions
+    )
+  ), 30 seconds)
 
   def tableExists() : Future[Boolean] = {
     webService.post("DynamoDB_20120810.ListTables", tableNameJson).map { result =>
