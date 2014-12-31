@@ -2,7 +2,7 @@ name := "play-dynamodb"
 
 organization := "com.rcirka"
 
-version := "0.1-SNAPSHOT"
+version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.11.4"
 
@@ -25,3 +25,13 @@ resolvers += "softprops-maven" at "http://dl.bintray.com/content/softprops/maven
 parallelExecution in Test := false
 
 testOptions in Test += Tests.Argument("-showtimes", "1")
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (version.value.trim.endsWith("SNAPSHOT"))
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")

@@ -40,13 +40,16 @@ class DynamoDbWebService(
       "content-type" -> "application/x-amz-json-1.0"
     )
 
-    //println(headers)
-
-    println(s"--- $target ---")
-    println(Json.prettyPrint(postData))
+    if (client.logRequests) {
+      play.api.Logger.info(s"--- $target ---")
+      play.api.Logger.info(Json.prettyPrint(postData))
+    }
 
     WS.url(client.endpoint.toString).withHeaders(headers.toSeq: _*).post(postData).map { response =>
-      println(response.json)
+      if (client.logRequests) {
+        //println(s"--- $target ---")
+        play.api.Logger.info(Json.prettyPrint(response.json))
+      }
 
       response.status match {
         case OK => response
