@@ -4,10 +4,11 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 case class TestModel (
-  id: String = "123456",
+  id: String = newKey(),
   mystring: String = "stringval",
   optmystring: Option[String] = None,
   mynum: Int = 5678,
+  mynum2: Int = 56781,
   optmynum: Option[Int] = None,
   mybool: Boolean = true,
   optmybool: Option[Boolean] = None,

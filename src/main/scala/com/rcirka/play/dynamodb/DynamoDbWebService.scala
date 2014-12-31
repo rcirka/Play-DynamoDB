@@ -1,6 +1,7 @@
 package com.rcirka.play.dynamodb
 
-import java.net.URI
+import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 
 import com.amazonaws.auth.AWS4Signer
 import com.amazonaws.util.AwsHostNameUtils
@@ -12,21 +13,21 @@ import play.api.libs.json._
 import play.api.libs.ws.{WS, WSResponse}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import play.api.http.Status._
 
 import scala.util.Try
 
 class DynamoDbWebService(
   val client: DynamoDBClient
-) {
+)(implicit ec: ExecutionContext) {
   val serviceName = "dynamodb" // Static string that identifies this service
 
   def post(target: String, postData: JsValue) : Future[WSResponse] = {
 
     val request = new DefaultRequest(new AmazonWebServiceRequest(){}, "AmazonDynamoDBv2")
     request.setEndpoint(client.endpoint)
+    request.setContent(new ByteArrayInputStream(postData.toString.getBytes(StandardCharsets.UTF_8)))
 
     val signer = new AWS4Signer()
     signer.setServiceName(serviceName)
@@ -40,13 +41,17 @@ class DynamoDbWebService(
       "content-type" -> "application/x-amz-json-1.0"
     )
 
-    //println(headers)
-
-    println(s"--- $target ---")
-    println(Json.prettyPrint(postData))
+    if (client.logRequests) {
+      play.api.Logger.info(s"--- $target ---")
+      play.api.Logger.info(headers.toString)
+      play.api.Logger.info(Json.prettyPrint(postData))
+    }
 
     WS.url(client.endpoint.toString).withHeaders(headers.toSeq: _*).post(postData).map { response =>
-      println(response.json)
+      if (client.logRequests) {
+        //println(s"--- $target ---")
+        play.api.Logger.info(Json.prettyPrint(response.json))
+      }
 
       response.status match {
         case OK => response
@@ -55,7 +60,7 @@ class DynamoDbWebService(
             // Try to get the exception type from the json response
             val errorResponse = response.json.as[JsObject]
             val errorClass = (errorResponse \ "__type").as[String].split('#')(1)
-            val errorMessage = (errorResponse \ "Message").as[String]
+            val errorMessage = (errorResponse \ "message").asOpt[String].getOrElse((errorResponse \ "Message").as[String])
 
             // Dynamically get the exception for the error class
             val constructor = Class.forName(s"com.rcirka.play.dynamodb.exception.$errorClass").getConstructors()(0)
@@ -64,7 +69,7 @@ class DynamoDbWebService(
             // Otherwise throw a generic exception
             val errorMessage = (for {
               errorResponse <- response.json.asOpt[JsObject]
-              errorMessage <- (errorResponse \ "Message").asOpt[String]
+              errorMessage <- (errorResponse \ "message").asOpt[String].orElse((errorResponse \ "Message").asOpt[String])
             } yield errorMessage).getOrElse("AWS returned unknown error")
 
             new UnknownException(errorMessage)
@@ -116,7 +121,7 @@ class DynamoDbWebService(
 }
 
 object DynamoDbWebService {
-  def apply(client: DynamoDBClient) = new DynamoDbWebService(client)
+  def apply(client: DynamoDBClient)(implicit ec: ExecutionContext) = new DynamoDbWebService(client)
 }
 
 

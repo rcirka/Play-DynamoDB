@@ -15,7 +15,7 @@ object KeyCondition {
     def writes(keyCondition: KeyCondition) : JsValue = {
       Json.obj(
         keyCondition.attributeName -> Json.obj(
-          "AttributeValueList" -> Json.arr(keyCondition.attributeValueList),
+          "AttributeValueList" -> keyCondition.attributeValueList,
           "ComparisonOperator" -> keyCondition.comparisonOperator
         )
       )
