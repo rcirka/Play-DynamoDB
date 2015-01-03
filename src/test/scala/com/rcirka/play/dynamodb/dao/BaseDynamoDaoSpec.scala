@@ -9,6 +9,7 @@ import com.rcirka.play.dynamodb.util._
 import org.specs2.mutable._
 import play.api.libs.json._
 import com.rcirka.play.dynamodb.Dsl._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class BaseDynamoDaoSpec extends Specification {
   "BaseDynamoDaoSpec" should {

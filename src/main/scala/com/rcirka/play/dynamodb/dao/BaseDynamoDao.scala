@@ -8,8 +8,7 @@ import com.rcirka.play.dynamodb.requests.{QueryRequest, CreateTableRequest}
 import com.rcirka.play.dynamodb.results.DescribeTableResult
 import com.rcirka.play.dynamodb.{DynamoDBClient, DynamoDbWebService}
 import play.api.libs.json._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ExecutionContext, Await, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import com.rcirka.play.dynamodb.utils.SeqUtils.SeqHelper
@@ -22,7 +21,7 @@ abstract class BaseDynamoDao[Model: Format](
   val globalSecondaryIndexes: Seq[TableIndex] = Nil,
   val localSecondaryIndexes: Seq[TableIndex] = Nil,
   val attributeDefinitions: Seq[AttributeDefinition]
-) {
+)(implicit ec: ExecutionContext) {
 
   val webService = DynamoDbWebService(client)
   val tableNameJson = Json.obj("TableName" -> tableName)

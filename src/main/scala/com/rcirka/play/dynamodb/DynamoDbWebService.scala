@@ -1,7 +1,5 @@
 package com.rcirka.play.dynamodb
 
-import java.net.URI
-
 import com.amazonaws.auth.AWS4Signer
 import com.amazonaws.util.AwsHostNameUtils
 import com.amazonaws.{AmazonWebServiceRequest, DefaultRequest}
@@ -12,15 +10,14 @@ import play.api.libs.json._
 import play.api.libs.ws.{WS, WSResponse}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import play.api.http.Status._
 
 import scala.util.Try
 
 class DynamoDbWebService(
   val client: DynamoDBClient
-) {
+)(implicit ec: ExecutionContext) {
   val serviceName = "dynamodb" // Static string that identifies this service
 
   def post(target: String, postData: JsValue) : Future[WSResponse] = {
@@ -119,7 +116,7 @@ class DynamoDbWebService(
 }
 
 object DynamoDbWebService {
-  def apply(client: DynamoDBClient) = new DynamoDbWebService(client)
+  def apply(client: DynamoDBClient)(implicit ec: ExecutionContext) = new DynamoDbWebService(client)
 }
 
 
