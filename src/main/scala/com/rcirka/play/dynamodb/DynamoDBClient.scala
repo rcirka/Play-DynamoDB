@@ -2,8 +2,10 @@ package com.rcirka.play.dynamodb
 
 import java.net.URI
 
+import com.amazonaws.auth.profile.ProfilesConfigFile
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import play.api.Play
+import scala.collection.JavaConversions._
 
 class DynamoDBClient(
   val endpoint: URI,
@@ -18,17 +20,27 @@ object DynamoDBClient {
    * Initialize client using application.conf values
    */
   lazy val db = {
-    val error = (endpoint:String) => throw new Exception(s"$endpoint must be defined in application.conf!")
+    //val x = new ProfilesConfigFile()
     val conf = Play.current.configuration
+    val error = (key: String) => throw new Exception(s"$key must be defined in application.conf!")
 
-    val endpoint = conf.getString("dynamodb.endpoint").getOrElse(error("dynamodb.endpoint"))
-    val accessKey = conf.getString("dynamodb.accesskey").getOrElse(error("dynamodb.accesskey"))
-    val secretKey = conf.getString("dynamodb.secretkey").getOrElse(error("dynamodb.secretkey"))
+    val endpointString = conf.getString("dynamodb.endpoint").getOrElse(error("dynamodb.endpoint"))
+    val endpoint = new URI(endpointString)
+    if (endpoint.getHost == null) throw new Exception(s"$endpointString is not a valid URI. Make sure the endpoint starts with http or https")
     val logRequest = conf.getBoolean("dynamodb.logrequests").getOrElse(false)
+
+    val (accessKey, secretKey) = conf.getString("dynamodb.profile").map { profile =>
+      val credentials = new ProfilesConfigFile().getCredentials(profile)
+      (credentials.getAWSAccessKeyId, credentials.getAWSSecretKey)
+    }.getOrElse {
+      val accessKey = conf.getString("dynamodb.accesskey").getOrElse(error("dynamodb.accesskey"))
+      val secretKey = conf.getString("dynamodb.secretkey").getOrElse(error("dynamodb.secretkey"))
+      (accessKey, secretKey)
+    }
 
     DynamoDBClient(endpoint, accessKey, secretKey, logRequest)
   }
 
-  def apply(endpoint: String, accessKey: String, secretKey: String, logRequests: Boolean = false) : DynamoDBClient =
-    new DynamoDBClient(new URI(endpoint), new BasicAWSCredentials(accessKey, secretKey), logRequests)
+  def apply(endpoint: URI, accessKey: String, secretKey: String, logRequests: Boolean = false) : DynamoDBClient =
+    new DynamoDBClient(endpoint, new BasicAWSCredentials(accessKey, secretKey), logRequests)
 }

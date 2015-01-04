@@ -34,20 +34,43 @@ abstract class BaseDynamoDao[Model: Format](
 
   createTableIfMissing()
 
-  def createTableIfMissing(): Unit = {
-    // Block thread for table creation
-    val exists = Await.result(tableExists(), 30 seconds)
+//  Disabled due to future timeout of 10 seconds
+//  def createTableIfMissing(): Unit = {
+//    // Block thread for table creation
+//    val exists = Await.result(tableExists(), 30 seconds)
+//
+//    if (!exists) {
+//      Await.result(new GlobalDynamoDao(client).createTableOnComplete(
+//        CreateTableRequest(
+//          tableName,
+//          keySchema = keySchema,
+//          globalSecondaryIndexes = globalSecondaryIndexes.toOption,
+//          localSecondaryIndexes = localSecondaryIndexes.toOption,
+//          attributeDefinitions = attributeDefinitions
+//        )
+//      ), 30 seconds)
+//    }
+//  }
 
-    if (!exists) {
-      Await.result(new GlobalDynamoDao(client).createTableOnComplete(
-        CreateTableRequest(
-          tableName,
-          keySchema = keySchema,
-          globalSecondaryIndexes = globalSecondaryIndexes.toOption,
-          localSecondaryIndexes = localSecondaryIndexes.toOption,
-          attributeDefinitions = attributeDefinitions
-        )
-      ), 30 seconds)
+  def createTableIfMissing(): Unit = {
+    tableExists().onComplete{
+      case Success(exists) => {
+        if (!exists) {
+          new GlobalDynamoDao(client).createTable(
+            CreateTableRequest(
+              tableName,
+              keySchema = keySchema,
+              globalSecondaryIndexes = globalSecondaryIndexes.toOption,
+              localSecondaryIndexes = localSecondaryIndexes.toOption,
+              attributeDefinitions = attributeDefinitions
+            )
+          ).onComplete {
+            case Success(e) => ()
+            case Failure(e) => ()
+          }
+        }
+      }
+      case Failure(e) => ()
     }
   }
 
