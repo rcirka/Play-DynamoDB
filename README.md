@@ -28,18 +28,31 @@ dynamodb {
 }
 ```
 ### AWS Instance
-To connect to an AWS instance of DynamoDB, you must specify the endpoint and either the accesskey/secret key or the aws credentials profile. 
+To connect to an AWS instance of DynamoDB, you must specify the endpoint or region and either the accesskey/secret key or the aws settings specified in ~/.aws/credentials  
 
 [http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html)
 
 
 ```
 dynamodb {
-  endpoint = "http://localhost:8000"
-  accesskey = "someaccesskey"
-  secretkey = "somesecretkey"
+  region = "us-east-1"
+  accesskey = "your_access_key"
+  secretkey = "your_secret_key"
 }
 ```
+
+or 
+
+```
+dynamodb {
+  region = "us-east-1"
+  profile = "default"
+}
+```
+
+## Creating a Database Access Object
+
+## Unit testing
 
 
 

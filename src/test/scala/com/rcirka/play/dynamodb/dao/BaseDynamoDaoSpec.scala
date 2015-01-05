@@ -9,7 +9,6 @@ import com.rcirka.play.dynamodb.util._
 import org.specs2.mutable._
 import play.api.libs.json._
 import com.rcirka.play.dynamodb.Dsl._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class BaseDynamoDaoSpec extends Specification {
   "BaseDynamoDaoSpec" should {
@@ -45,55 +44,29 @@ class BaseDynamoDaoSpec extends Specification {
       val model = TestModel("1")
       awaitResult(dao.put(model))
 
-      awaitResult(dao.queryByIndex("myindex", "mystring" $eq "stringval")).length === 1
+      awaitResult(dao.queryByIndex("mystring_index", "mystring" $eq "stringval")).length === 1
     } tag "query"
 
     "Exists global index" in new DynamoDAOSpecContext {
       val model = TestModel("1")
       awaitResult(dao.put(model))
 
-      awaitResult(dao.exists("myindex", "mystring" $eq "stringval")) === true
+      awaitResult(dao.exists("mystring_index", "mystring" $eq "stringval")) === true
     } tag "existsglobalindex"
 
     "Count global index" in new DynamoDAOSpecContext {
       val model = TestModel("1")
       awaitResult(dao.put(model))
 
-      awaitResult(dao.count("myindex", "mystring" $eq "stringval")) === 1
+      awaitResult(dao.count("mystring_index", "mystring" $eq "stringval")) === 1
     } tag "countglobalindex"
   }
 }
 
-class TestDao extends BaseDynamoDao[TestModel](
-  client = Test.dbClient,
-  tableName = "Tests",
-  keySchema = Seq(AttributeIndex("id", KeyType.Hash)),
-  attributeDefinitions = Seq(AttributeDefinition("id", AttributeType.String), AttributeDefinition("mystring", AttributeType.String)),
-  globalSecondaryIndexes = Seq(
-    TableIndex(
-      "myindex",
-      Seq(
-        AttributeIndex("mystring", KeyType.Hash)
-      ),
-      provisionedThroughput = Some(ProvisionedThroughput()),
-      projection = Some(Projection(ProjectionType.All))
-    )
-  )
-)
-
-
 sealed trait DynamoDAOSpecContext extends BeforeAfterWithApplication {
-
-  val tableName = "Tests"
 
   lazy val dao = new TestDao()
 
   def before() {}
-
-  //def createTable() = awaitResult(dao.createTable())
-
-  def testDao() = {
-
-  }
 }
 

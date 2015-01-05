@@ -20,7 +20,8 @@ abstract class BaseDynamoDao[Model: Format](
   val keySchema: Seq[AttributeIndex],
   val globalSecondaryIndexes: Seq[TableIndex] = Nil,
   val localSecondaryIndexes: Seq[TableIndex] = Nil,
-  val attributeDefinitions: Seq[AttributeDefinition]
+  val attributeDefinitions: Seq[AttributeDefinition],
+  val blockOnTableCreation : Boolean = false // Primary meant for unit tests
 )(implicit ec: ExecutionContext) {
 
   val webService = DynamoDbWebService(client)
@@ -32,25 +33,25 @@ abstract class BaseDynamoDao[Model: Format](
     keySchema.find(_.keyType == KeyType.Hash).map(_.attributeName)
       .getOrElse(throw new Exception("Primary key must be defined"))
 
-  createTableIfMissing()
+  if (blockOnTableCreation) createTableIfMissingAndBlock() else createTableIfMissing()
 
-//  Disabled due to future timeout of 10 seconds
-//  def createTableIfMissing(): Unit = {
-//    // Block thread for table creation
-//    val exists = Await.result(tableExists(), 30 seconds)
-//
-//    if (!exists) {
-//      Await.result(new GlobalDynamoDao(client).createTableOnComplete(
-//        CreateTableRequest(
-//          tableName,
-//          keySchema = keySchema,
-//          globalSecondaryIndexes = globalSecondaryIndexes.toOption,
-//          localSecondaryIndexes = localSecondaryIndexes.toOption,
-//          attributeDefinitions = attributeDefinitions
-//        )
-//      ), 30 seconds)
-//    }
-//  }
+// TODO: This will probably fail in AWS due to future timeout of 10 seconds. Need to modify future timeout.
+  def createTableIfMissingAndBlock(): Unit = {
+    // Block thread for table creation
+    val exists = Await.result(tableExists(), 30 seconds)
+
+    if (!exists) {
+      Await.result(new GlobalDynamoDao(client).createTableOnComplete(
+        CreateTableRequest(
+          tableName,
+          keySchema = keySchema,
+          globalSecondaryIndexes = globalSecondaryIndexes.toOption,
+          localSecondaryIndexes = localSecondaryIndexes.toOption,
+          attributeDefinitions = attributeDefinitions
+        )
+      ), 30 seconds)
+    }
+  }
 
   def createTableIfMissing(): Unit = {
     tableExists().onComplete{
