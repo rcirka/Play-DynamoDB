@@ -27,16 +27,14 @@ abstract class BaseDynamoDao[Model: Format](
   val webService = DynamoDbWebService(client)
   val tableNameJson = Json.obj("TableName" -> tableName)
 
-  //new GlobalDynamoDao(client).createTableIfMissing(tableName)
-
   private val primaryKey : String =
     keySchema.find(_.keyType == KeyType.Hash).map(_.attributeName)
       .getOrElse(throw new Exception("Primary key must be defined"))
 
   if (blockOnTableCreation) createTableIfMissingAndBlock() else createTableIfMissing()
 
-// TODO: This will probably fail in AWS due to future timeout of 10 seconds. Need to modify future timeout.
-  def createTableIfMissingAndBlock(): Unit = {
+// TODO: This will probably fail in AWS due to the default future timeout of 10 seconds. Need to modify future timeout to make this work.
+  private def createTableIfMissingAndBlock(): Unit = {
     // Block thread for table creation
     val exists = Await.result(tableExists(), 30 seconds)
 
@@ -53,7 +51,7 @@ abstract class BaseDynamoDao[Model: Format](
     }
   }
 
-  def createTableIfMissing(): Unit = {
+  private def createTableIfMissing(): Unit = {
     tableExists().onComplete{
       case Success(exists) => {
         if (!exists) {
@@ -129,7 +127,7 @@ abstract class BaseDynamoDao[Model: Format](
     webService.putItem(json).map(x => ())
   }
 
-  def deleteOne[A: Writes](value: A) : Future[Unit] = {
+  def delete[A: Writes](value: A) : Future[Unit] = {
     val json = Json.obj(
       "Key" -> Json.obj(
         primaryKey -> wrapItemVal(Json.toJson(value))
@@ -150,8 +148,17 @@ abstract class BaseDynamoDao[Model: Format](
     }
   }
 
-  def queryByIndex(index: String, keyCondition: KeyCondition) : Future[Seq[Model]] = {
-    val request = QueryRequest(tableName, Some(index), Seq(keyCondition))
+  def queryByIndex(index: String, hashCondition: KeyCondition) : Future[Seq[Model]] = {
+    val request = QueryRequest(tableName, Some(index), Seq(hashCondition))
+
+    webService.post("DynamoDB_20120810.Query", Json.toJson(request)).map { result =>
+      val itemsJson = (result.json \ "Items").asOpt[Seq[JsObject]]
+      itemsJson.map(_.map(unwrapItem(_).as[Model])).getOrElse(Nil)
+    }
+  }
+
+  def queryByIndex(index: String, hashCondition: KeyCondition, rangeCondition: KeyCondition) : Future[Seq[Model]] = {
+    val request = QueryRequest(tableName, Some(index), Seq(hashCondition, rangeCondition))
 
     webService.post("DynamoDB_20120810.Query", Json.toJson(request)).map { result =>
       val itemsJson = (result.json \ "Items").asOpt[Seq[JsObject]]

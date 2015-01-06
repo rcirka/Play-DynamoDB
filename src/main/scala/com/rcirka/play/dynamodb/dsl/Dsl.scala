@@ -12,6 +12,8 @@ object Dsl {
     def $le[A: Writes](value: A) = KeyCondition(str, wrapItemVal(Json.toJson(value)), ComparisonOperator.LessThanOrEqual)
     def $lt[A: Writes](value: A) = KeyCondition(str, wrapItemVal(Json.toJson(value)), ComparisonOperator.LessThan)
     def $ge[A: Writes](value: A) = KeyCondition(str, wrapItemVal(Json.toJson(value)), ComparisonOperator.GreaterThanOrEqual)
+    def $gt[A: Writes](value: A) = KeyCondition(str, wrapItemVal(Json.toJson(value)), ComparisonOperator.GreaterThan)
+    // TODO: Implement remaining conditions
     //def $notNull[A: Writes] = KeyCondition(str, wrapItemVal(Json.toJson(true)), ComparisonOperator.GreaterThanOrEqual)
     //def $null[A: Writes] = KeyCondition(str, wrapItemVal(Json.toJson(true)), ComparisonOperator.GreaterThanOrEqual)
   }

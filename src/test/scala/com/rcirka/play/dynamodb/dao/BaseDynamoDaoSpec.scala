@@ -25,7 +25,7 @@ class BaseDynamoDaoSpec extends Specification {
       val model = TestModel("1")
       awaitResult(dao.put(model))
 
-      awaitResult(dao.deleteOne("1"))
+      awaitResult(dao.delete("1"))
 
       awaitResult(dao.get("1")) === None
     } tag "deleteitem"

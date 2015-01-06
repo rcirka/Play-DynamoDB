@@ -12,13 +12,15 @@ class TestDao extends BaseDynamoDao[TestModel](
   keySchema = Seq(AttributeIndex("id", KeyType.Hash)),
   attributeDefinitions = Seq(
     AttributeDefinition("id", AttributeType.String),
-    AttributeDefinition("mystring", AttributeType.String)
+    AttributeDefinition("mystring", AttributeType.String),
+    AttributeDefinition("mynum", AttributeType.Numeric)
   ),
   globalSecondaryIndexes = Seq(
     TableIndex(
       "mystring_index",
       Seq(
-        AttributeIndex("mystring", KeyType.Hash)
+        AttributeIndex("mystring", KeyType.Hash),
+        AttributeIndex("mynum", KeyType.Range)
       ),
       provisionedThroughput = Some(ProvisionedThroughput()),
       projection = Some(Projection(ProjectionType.All))
