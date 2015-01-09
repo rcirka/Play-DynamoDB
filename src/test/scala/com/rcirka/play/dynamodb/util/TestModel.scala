@@ -8,6 +8,7 @@ case class TestModel (
   mystring: String = "stringval",
   optmystring: Option[String] = None,
   mynum: Int = 5678,
+  mynum2: Int = 56781,
   optmynum: Option[Int] = None,
   mybool: Boolean = true,
   optmybool: Option[Boolean] = None,

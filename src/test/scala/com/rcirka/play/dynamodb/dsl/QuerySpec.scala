@@ -1,14 +1,31 @@
 package com.rcirka.play.dynamodb.dsl
 
 import com.rcirka.play.dynamodb.util.{TestDao, BeforeAfterWithApplication}
+import org.joda.time.DateTime
 import org.specs2.mutable._
 import com.rcirka.play.dynamodb.util._
 import com.rcirka.play.dynamodb.Dsl._
 
-class DslSpec extends Specification {
-  "DslSpec" should {
+class QuerySpec extends Specification {
+  "Query" should {
 
-    "satisfy $eq" in new DslSpecContext {
+    "query primary key with range with result" in new DslSpecContext {
+      val model = TestModel(mydate = DateTime.now)
+      awaitResult(dao.put(model))
+
+      val result = awaitResult(dao.query(model.id, "mydate" $lt DateTime.now))
+      model mustEqual result(0)
+    }
+
+    "query primary key with range with no result" in new DslSpecContext {
+      val model = TestModel(mydate = DateTime.now)
+      awaitResult(dao.put(model))
+
+      val result = awaitResult(dao.query(model.id, "mydate" $gt DateTime.now))
+      result.length === 0
+    }
+
+    "query by index" in new DslSpecContext {
       val model = TestModel(mystring = "teststring")
       awaitResult(dao.put(model))
 
@@ -16,7 +33,7 @@ class DslSpec extends Specification {
       model mustEqual result(0)
     }
 
-    "satisfy $gt" in new DslSpecContext {
+    "query using greater than" in new DslSpecContext {
       val model1 = TestModel(mystring = "teststring", mynum = 5)
       awaitResult(dao.put(model1))
 

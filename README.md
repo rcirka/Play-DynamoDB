@@ -3,7 +3,7 @@ Play-DynamoDB
 
 A DynamoDB API and data access layer for Scala Play. This is not a wrapper around the AWS java sdk, but a native implementation using Scala Futures and Play Web services. There is no dependency on the official DynamoDb sdk, and only references the core AWS sdk for obtaining credentials and signing the http requests.
 
-The motivations behind this library is to provide a simple, asynchronous data access layer for DynamoDB, and leverage the native json parsing of the Play framework. Although the AWS sdk does have asynchronous methods, it uses java futures, which have performance problems and are not compatible with Play. Also, creating the database requests are quite verbose, which this library aims to simplify.
+The motivations behind this library is to provide a simple, asynchronous data access layer for DynamoDB, and leverage the native json parsing of the Play framework. Although the AWS sdk does have asynchronous methods, it uses java futures, which have performance implications and are not compatible with Play. Also, creating the database requests in Java are quite verbose, which this library aims to simplify.
 
 ## Dependencies
 Currently a minimum of Play 2.3 and Scala 2.11 is required.
@@ -52,7 +52,7 @@ dynamodb {
 
 ## Creating a Model and Database Access Layer
 
-A case class with Format works well as a model, although any class that conforms to Play JSON reads/writes will work. Let's take for example a message model.
+A Scala case class with Format works well as a model, although any class that conforms to Play JSON reads/writes will work. Let's take for example a message model.
 
 ```scala
 import java.util.UUID
@@ -125,11 +125,92 @@ object MessageController extends Controller {
 }
 ```
 
-## Querying
 
 ## Indexes
 
+attributeDefinitions must contain a list of all indexes specified in keySchema, localSecondaryIndexes, globalSecondaryIndexes
+
+Table keySchema must contain 1 hash, and may include 1 range.
+
+When creating a local secondary index, the table key schema must already have a range value. The local index hash key must be the same as the table keySchema hash key.
+
+A global secondary index must have 1 hash key, with an optional range key. provisionedThroughput must be specified.
+
+```scala
+class TestDao extends BaseDynamoDao[TestModel](
+  client = Test.dbClient,
+  tableName = "Tests",
+  attributeDefinitions = Seq(
+    AttributeDefinition("id", AttributeType.String),
+    AttributeDefinition("mystring", AttributeType.String),
+    AttributeDefinition("mynum", AttributeType.Numeric),
+    AttributeDefinition("mynum2", AttributeType.Numeric),
+    AttributeDefinition("mydate", AttributeType.Numeric)
+  ),
+  keySchema = Seq(AttributeIndex("id", KeyType.Hash), AttributeIndex("mydate", KeyType.Range)),
+  localSecondaryIndexes = Seq(
+    TableIndex(
+      indexName = "mydate_local_index",
+      keySchema = Seq(
+        AttributeIndex("id", KeyType.Hash),
+        AttributeIndex("mynum2", KeyType.Range)
+      ),
+      projection = Some(Projection(ProjectionType.All))
+    )
+  ),
+  globalSecondaryIndexes = Seq(
+    TableIndex(
+      indexName = "mystring_index",
+      keySchema = Seq(
+        AttributeIndex("mystring", KeyType.Hash),
+        AttributeIndex("mynum", KeyType.Range)
+      ),
+      provisionedThroughput = Some(ProvisionedThroughput()),
+      projection = Some(Projection(ProjectionType.All))
+    )
+  )
+)
+
+```
+
+## Querying
+
+Queries in DynamoDb have certain restrictions. Queries can have 1 or 2 conditions. The first condition must be an equality condition on the primary key or global index, with an optional range condition.
+
+There is a fairly basic DSL that is implemented. The currently supported operators are the following.
+
+```
+$eq - equals  
+$ne - not equals  
+$le - less than or equal  
+$lt - less than  
+$ge - greater than or equal  
+$gt - greater than  
+```
+
+To query in the primary key, you would use the "query" method.
+
+```scala
+MessageDao.query(message.id, "date" $lt DateTime.now)
+```
+
+To query a global secondary index, you would use "queryByIndex", specifying the index name, the index equality, and optional range. The key used in the equality statement must match the key specified in the index.
+
+```scala
+MessageDao.queryByIndex("date_index", "date" $eq DateTime.now)
+```
+
+## Scan
+TODO
+
+## Projections
+TODO
+
 ## Unit testing
+TODO
+
+## TODO
+lots
 
 
 

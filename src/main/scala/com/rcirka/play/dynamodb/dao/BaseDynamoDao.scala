@@ -13,6 +13,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 import com.rcirka.play.dynamodb.utils.SeqUtils.SeqHelper
 import com.rcirka.play.dynamodb.utils.JsonHelper._
+import com.rcirka.play.dynamodb.Dsl._
 
 abstract class BaseDynamoDao[Model: Format](
   val client: DynamoDBClient,
@@ -135,12 +136,10 @@ abstract class BaseDynamoDao[Model: Format](
     ) ++ tableNameJson
 
     webService.post("DynamoDB_20120810.DeleteItem", json).map(x => ())
-
-    //webService.getItem(json).map { x => () }
   }
 
-  def query(keyCondition: KeyCondition) : Future[Seq[Model]] = {
-    val request = QueryRequest(tableName, keyConditions = Seq(keyCondition))
+  def query[A: Writes](keyValue: A, rangeCondition: KeyCondition) : Future[Seq[Model]] = {
+    val request = QueryRequest(tableName, keyConditions = Seq(primaryKey $eq keyValue, rangeCondition))
 
     webService.post("DynamoDB_20120810.Query", Json.toJson(request)).map { result =>
       val itemsJson = (result.json \ "Items").asOpt[Seq[JsObject]]
